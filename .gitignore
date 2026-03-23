@@ -40,3 +40,4 @@ next-env.d.ts
 # data files (Kaggle datasets)
 /data
 .env
+desktop.ini
