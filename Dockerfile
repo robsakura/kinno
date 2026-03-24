@@ -27,4 +27,4 @@ COPY --from=builder /app/prisma ./prisma
 EXPOSE 3000
 
 # Run migrations then start
-CMD npx prisma migrate deploy && npm start
+CMD npx prisma db push && npm start
