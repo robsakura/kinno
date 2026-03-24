@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchMovies } from "@/lib/tmdb";
+import { filterMoviesByPGData } from "@/lib/pg-filter";
 
 export const dynamic = "force-dynamic";
 
@@ -9,5 +10,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json([]);
   }
   const results = await searchMovies(q);
-  return NextResponse.json(results);
+  const filtered = await filterMoviesByPGData(results);
+  return NextResponse.json(filtered);
 }

@@ -139,6 +139,21 @@ export default async function GamePage({ params }: PageProps) {
   }
   if (!movie) notFound();
 
+  // Block movies without verified PG data
+  if (movie.pgDataUncertain) {
+    return (
+      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
+        <div className="text-center space-y-4 p-8">
+          <p className="text-2xl font-bold text-slate-100">Parental guide data not available</p>
+          <p className="text-slate-400">This movie isn&apos;t in our dataset yet.</p>
+          <a href="/" className="inline-block mt-4 px-6 py-2 bg-amber-500 text-black rounded-lg font-semibold hover:bg-amber-400 transition">
+            Back to Home
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   // Check if the logged-in user already guessed this movie
   let initialResult: GuessResult | undefined;
   let initialGuess: GuessPayload | undefined;

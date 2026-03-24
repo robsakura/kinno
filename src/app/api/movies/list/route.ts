@@ -5,6 +5,7 @@ import {
   getMoviesByGenre,
 } from "@/lib/tmdb";
 import { TMDbSearchResult } from "@/types";
+import { filterMoviesByPGData } from "@/lib/pg-filter";
 
 export const dynamic = "force-dynamic";
 
@@ -25,5 +26,6 @@ export async function GET(req: NextRequest) {
     movies = [];
   }
 
-  return NextResponse.json(movies);
+  const filtered = await filterMoviesByPGData(movies);
+  return NextResponse.json(filtered);
 }
