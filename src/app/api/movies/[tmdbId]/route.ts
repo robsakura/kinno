@@ -18,9 +18,13 @@ export async function GET(
     return NextResponse.json({ error: "Invalid tmdbId" }, { status: 400 });
   }
 
-  // Check DB cache first
+  // Check DB cache first (skip if PG data is uncertain)
   const cached = await prisma.movie.findFirst({ where: { tmdbId } });
-  if (cached && Date.now() - cached.cachedAt.getTime() < CACHE_TTL_MS) {
+  if (
+    cached &&
+    !cached.pgDataUncertain &&
+    Date.now() - cached.cachedAt.getTime() < CACHE_TTL_MS
+  ) {
     const movie: MovieData = {
       id: cached.id,
       tmdbId: cached.tmdbId,
@@ -32,7 +36,7 @@ export async function GET(
       profanity: cached.profanity,
       alcoholDrugs: cached.alcoholDrugs,
       frightening: cached.frightening,
-      pgDataUncertain: cached.pgDataUncertain,
+      pgDataUncertain: false,
       posterPath: cached.posterPath,
     };
     return NextResponse.json(movie);
@@ -81,6 +85,7 @@ export async function GET(
       posterPath: detail.posterPath,
       cachedAt: new Date(),
     },
+
   });
 
   const result: MovieData = {

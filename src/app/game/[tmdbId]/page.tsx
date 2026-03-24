@@ -17,7 +17,13 @@ const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 async function getOrFetchMovie(tmdbId: number): Promise<MovieData | null> {
   const cached = await prisma.movie.findFirst({ where: { tmdbId } });
-  if (cached && Date.now() - cached.cachedAt.getTime() < CACHE_TTL_MS) {
+
+  // Only use cache when PG data is confirmed and within TTL
+  if (
+    cached &&
+    !cached.pgDataUncertain &&
+    Date.now() - cached.cachedAt.getTime() < CACHE_TTL_MS
+  ) {
     return {
       id: cached.id,
       tmdbId: cached.tmdbId,
@@ -29,7 +35,39 @@ async function getOrFetchMovie(tmdbId: number): Promise<MovieData | null> {
       profanity: cached.profanity,
       alcoholDrugs: cached.alcoholDrugs,
       frightening: cached.frightening,
-      pgDataUncertain: cached.pgDataUncertain,
+      pgDataUncertain: false,
+      posterPath: cached.posterPath,
+    };
+  }
+
+  // If the movie exists but PG data is uncertain, re-scrape PG only
+  if (cached && cached.pgDataUncertain) {
+    const pg = await getParentalGuide(cached.id);
+    if (!pg.uncertain) {
+      await prisma.movie.update({
+        where: { id: cached.id },
+        data: {
+          sexNudity: pg.sexNudity,
+          violenceGore: pg.violenceGore,
+          profanity: pg.profanity,
+          alcoholDrugs: pg.alcoholDrugs,
+          frightening: pg.frightening,
+          pgDataUncertain: false,
+        },
+      });
+    }
+    return {
+      id: cached.id,
+      tmdbId: cached.tmdbId,
+      title: cached.title,
+      year: cached.year,
+      imdbRating: cached.imdbRating,
+      sexNudity: pg.sexNudity,
+      violenceGore: pg.violenceGore,
+      profanity: pg.profanity,
+      alcoholDrugs: pg.alcoholDrugs,
+      frightening: pg.frightening,
+      pgDataUncertain: pg.uncertain,
       posterPath: cached.posterPath,
     };
   }
@@ -62,6 +100,12 @@ async function getOrFetchMovie(tmdbId: number): Promise<MovieData | null> {
     },
     update: {
       imdbRating: finalRating,
+      sexNudity: pg.sexNudity,
+      violenceGore: pg.violenceGore,
+      profanity: pg.profanity,
+      alcoholDrugs: pg.alcoholDrugs,
+      frightening: pg.frightening,
+      pgDataUncertain: pg.uncertain,
       posterPath: detail.posterPath,
       cachedAt: new Date(),
     },

@@ -10,13 +10,14 @@ export interface ParentalGuideData {
   uncertain: boolean;
 }
 
-function severityToInt(text: string): number {
-  const t = text.toLowerCase().trim();
-  if (t.includes("none") || t.includes("not applicable")) return 0;
-  if (t.includes("mild")) return 1;
-  if (t.includes("moderate")) return 2;
+// Returns null if text doesn't contain a recognised severity keyword
+function parseSeverity(text: string): number | null {
+  const t = text.toLowerCase();
   if (t.includes("severe")) return 3;
-  return 1; // default mild
+  if (t.includes("moderate")) return 2;
+  if (t.includes("mild")) return 1;
+  if (t.includes("none") || t.includes("not applicable")) return 0;
+  return null;
 }
 
 const SECTION_MAP: Record<string, keyof Omit<ParentalGuideData, "uncertain">> = {
@@ -33,9 +34,13 @@ async function scrapeIMDb(imdbId: string): Promise<ParentalGuideData | null> {
     const res = await fetch(url, {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9",
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Upgrade-Insecure-Requests": "1",
+        "Cache-Control": "max-age=0",
       },
     });
     if (!res.ok) return null;
@@ -46,20 +51,41 @@ async function scrapeIMDb(imdbId: string): Promise<ParentalGuideData | null> {
 
     for (const [sectionId, field] of Object.entries(SECTION_MAP)) {
       const section = $(`section#${sectionId}`);
-      // Try the severity pill first (ipl-status-pill or similar)
-      const pill = section
-        .find(".ipl-status-pill, [class*='severity'], [class*='rating-label']")
-        .first()
-        .text()
-        .trim();
-      if (pill) {
-        result[field] = severityToInt(pill);
+      if (!section.length) continue;
+
+      // Strategy 1: explicit pill class (older IMDb design)
+      const pill = section.find(".ipl-status-pill").first().text().trim();
+      const pillVal = parseSeverity(pill);
+      if (pillVal !== null) {
+        result[field] = pillVal;
         continue;
       }
-      // Fallback: look for the certification/rating text within the section header
-      const headerText = section.find("h4, .advisory-title, strong").first().next().text().trim();
-      if (headerText) {
-        result[field] = severityToInt(headerText);
+
+      // Strategy 2: data-severity attribute
+      const dataSev = section.find("[data-severity]").first().attr("data-severity") ?? "";
+      const dataVal = parseSeverity(dataSev);
+      if (dataVal !== null) {
+        result[field] = dataVal;
+        continue;
+      }
+
+      // Strategy 3: clone section, strip content entry lists, scan remaining text
+      // The severity label always appears in the header area, before <ul> content entries
+      const clone = section.clone();
+      clone.find("ul, li, .advisory-entries, .advisory-entry, .ipl-zebra-list").remove();
+      const headerText = clone.text();
+      const headerVal = parseSeverity(headerText);
+      if (headerVal !== null) {
+        result[field] = headerVal;
+        continue;
+      }
+
+      // Strategy 4: scan first occurrence of severity word in full section text
+      // (last resort — still better than always returning mild)
+      const fullText = section.text();
+      const match = fullText.match(/\b(none|mild|moderate|severe)\b/i);
+      if (match) {
+        result[field] = parseSeverity(match[1]) ?? 1;
       }
     }
 
@@ -80,13 +106,9 @@ async function scrapeIMDb(imdbId: string): Promise<ParentalGuideData | null> {
 }
 
 export async function getParentalGuide(imdbId: string): Promise<ParentalGuideData> {
-  // Tier 1: check if already cached in DB with data
+  // Only use cache if data is confirmed (not uncertain)
   const movie = await prisma.movie.findUnique({ where: { id: imdbId } });
-  if (
-    movie &&
-    !movie.pgDataUncertain &&
-    movie.sexNudity !== null
-  ) {
+  if (movie && !movie.pgDataUncertain) {
     return {
       sexNudity: movie.sexNudity,
       violenceGore: movie.violenceGore,
@@ -97,11 +119,11 @@ export async function getParentalGuide(imdbId: string): Promise<ParentalGuideDat
     };
   }
 
-  // Tier 2: scrape IMDb
+  // Scrape IMDb (also re-runs whenever cached data was previously uncertain)
   const scraped = await scrapeIMDb(imdbId);
   if (scraped) return scraped;
 
-  // Tier 3: default to mild across the board, flag as uncertain
+  // Fallback: default to mild, flag as uncertain
   return {
     sexNudity: 1,
     violenceGore: 1,
