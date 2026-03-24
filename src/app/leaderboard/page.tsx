@@ -7,13 +7,13 @@ export const dynamic = "force-dynamic";
 
 export default async function LeaderboardPage() {
   const session = await getServerSession(authOptions);
-  let users: { id: string; name: string | null; image: string | null; totalPoints: number }[] = [];
+  let users: { id: string; name: string | null; username: string | null; image: string | null; totalPoints: number }[] = [];
 
   try {
     users = await prisma.user.findMany({
       orderBy: { totalPoints: "desc" },
       take: 20,
-      select: { id: true, name: true, image: true, totalPoints: true },
+      select: { id: true, name: true, username: true, image: true, totalPoints: true },
     });
   } catch {
     // DB not ready
@@ -72,7 +72,7 @@ export default async function LeaderboardPage() {
                   </div>
                 )}
                 <span className={`flex-1 text-sm font-medium ${isCurrentUser ? "text-gold" : "text-slate-200"}`}>
-                  {user.name ?? "Anonymous"}
+                  {user.username ?? user.name ?? "Anonymous"}
                   {isCurrentUser && " (you)"}
                 </span>
                 <span className="text-sm font-bold text-gold">{user.totalPoints.toLocaleString()}</span>

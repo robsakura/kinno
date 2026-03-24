@@ -1,6 +1,7 @@
 import { getDailyChallenge } from "@/lib/daily";
 import DailyChallenge from "@/components/home/DailyChallenge";
 import SearchBar from "@/components/home/SearchBar";
+import SuggestedLists from "@/components/home/SuggestedLists";
 import Image from "next/image";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +47,14 @@ export default async function HomePage() {
           Or Play Today&apos;s Challenge
         </p>
         <DailyChallenge movie={daily} />
+      </div>
+
+      {/* Suggested lists */}
+      <div className="space-y-3">
+        <p className="text-center text-xs font-semibold uppercase tracking-wider text-cinema-muted">
+          Browse by List
+        </p>
+        <SuggestedLists />
       </div>
     </div>
   );

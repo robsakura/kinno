@@ -31,15 +31,20 @@ export default function Navbar() {
           {status === "loading" ? (
             <div className="h-8 w-8 animate-pulse rounded-full bg-cinema-surface" />
           ) : session ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {session.user?.image && (
                 <Image
                   src={session.user.image}
                   alt={session.user.name ?? "User"}
-                  width={32}
-                  height={32}
-                  className="rounded-full border border-cinema-border"
+                  width={28}
+                  height={28}
+                  className="rounded-full border border-cinema-border shrink-0"
                 />
+              )}
+              {session.user?.username && (
+                <span className="text-sm font-medium text-slate-200 max-w-[120px] truncate">
+                  {session.user.username}
+                </span>
               )}
               <button
                 onClick={() => signOut()}

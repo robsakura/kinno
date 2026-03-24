@@ -88,7 +88,7 @@ export default function SliderGroup({ tmdbId, onSubmit, submitting }: SliderGrou
       {/* Parental Guide */}
       <div className="rounded-xl border border-cinema-border bg-cinema-surface p-4 space-y-5">
         <p className="text-xs font-semibold uppercase tracking-wider text-cinema-muted">
-          Parents Guide
+          Parental Guide Ratings
         </p>
         {PG_CATEGORIES.map(({ key, label, icon }) => (
           <GuessSlider

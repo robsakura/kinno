@@ -67,6 +67,64 @@ export interface TMDbMovieDetail {
   imdbId: string | null;
 }
 
+export async function getTopRatedMovies(page = 1): Promise<TMDbSearchResult[]> {
+  const url = buildUrl("/movie/top_rated", { page: String(page) });
+  const res = await fetch(url, {
+    headers: authHeaders(),
+    next: { revalidate: 86400 },
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.results || []).map((m: Record<string, unknown>) => ({
+    tmdbId: m.id as number,
+    title: m.title as string,
+    year: m.release_date ? parseInt((m.release_date as string).split("-")[0]) : null,
+    posterPath: m.poster_path as string | null,
+  }));
+}
+
+export async function getMoviesByPerson(personId: number): Promise<TMDbSearchResult[]> {
+  const url = buildUrl(`/person/${personId}/movie_credits`);
+  const res = await fetch(url, {
+    headers: authHeaders(),
+    next: { revalidate: 86400 },
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  const cast: Record<string, unknown>[] = data.cast || [];
+  return cast
+    .filter((m) => m.poster_path && m.release_date)
+    .sort((a, b) => (b.popularity as number) - (a.popularity as number))
+    .slice(0, 20)
+    .map((m) => ({
+      tmdbId: m.id as number,
+      title: m.title as string,
+      year: parseInt((m.release_date as string).split("-")[0]),
+      posterPath: m.poster_path as string | null,
+    }));
+}
+
+export async function getMoviesByGenre(genreId: number): Promise<TMDbSearchResult[]> {
+  const url = buildUrl("/discover/movie", {
+    with_genres: String(genreId),
+    sort_by: "vote_average.desc",
+    "vote_count.gte": "1000",
+    page: "1",
+  });
+  const res = await fetch(url, {
+    headers: authHeaders(),
+    next: { revalidate: 86400 },
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.results || []).slice(0, 20).map((m: Record<string, unknown>) => ({
+    tmdbId: m.id as number,
+    title: m.title as string,
+    year: m.release_date ? parseInt((m.release_date as string).split("-")[0]) : null,
+    posterPath: m.poster_path as string | null,
+  }));
+}
+
 export async function getMovieDetail(tmdbId: number): Promise<TMDbMovieDetail | null> {
   const url = buildUrl(`/movie/${tmdbId}`, {
     append_to_response: "external_ids",
