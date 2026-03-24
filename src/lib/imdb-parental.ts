@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import prisma from "./prisma";
+import { getBrowser } from "./browser";
 
 export interface ParentalGuideData {
   sexNudity: number;
@@ -30,21 +31,20 @@ const SECTION_MAP: Record<string, keyof Omit<ParentalGuideData, "uncertain">> = 
 
 async function scrapeIMDb(imdbId: string): Promise<ParentalGuideData | null> {
   const url = `https://www.imdb.com/title/${imdbId}/parentalguide/`;
+  let html: string;
   try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Upgrade-Insecure-Requests": "1",
-        "Cache-Control": "max-age=0",
-      },
-    });
-    if (!res.ok) return null;
-    const html = await res.text();
+    // Use a real browser (Playwright) to solve IMDb's AWS WAF JS challenge
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    try {
+      await page.setExtraHTTPHeaders({ "Accept-Language": "en-US,en;q=0.9" });
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
+      // Wait for actual page content — WAF challenge resolves then redirects
+      await page.waitForSelector("section[id^='advisory-']", { timeout: 10000 });
+      html = await page.content();
+    } finally {
+      await page.close();
+    }
     const $ = cheerio.load(html);
 
     const result: Partial<Omit<ParentalGuideData, "uncertain">> = {};
