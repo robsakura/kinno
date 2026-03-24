@@ -1,6 +1,5 @@
 import * as cheerio from "cheerio";
 import prisma from "./prisma";
-import { getBrowser } from "./browser";
 
 export interface ParentalGuideData {
   sexNudity: number;
@@ -31,20 +30,17 @@ const SECTION_MAP: Record<string, keyof Omit<ParentalGuideData, "uncertain">> = 
 
 async function scrapeIMDb(imdbId: string): Promise<ParentalGuideData | null> {
   const url = `https://www.imdb.com/title/${imdbId}/parentalguide/`;
-  let html: string;
   try {
-    // Use a real browser (Playwright) to solve IMDb's AWS WAF JS challenge
-    const browser = await getBrowser();
-    const page = await browser.newPage();
-    try {
-      await page.setExtraHTTPHeaders({ "Accept-Language": "en-US,en;q=0.9" });
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
-      // Wait for actual page content — WAF challenge resolves then redirects
-      await page.waitForSelector("section[id^='advisory-']", { timeout: 10000 });
-      html = await page.content();
-    } finally {
-      await page.close();
-    }
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+      },
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
     const $ = cheerio.load(html);
 
     const result: Partial<Omit<ParentalGuideData, "uncertain">> = {};
@@ -106,7 +102,20 @@ async function scrapeIMDb(imdbId: string): Promise<ParentalGuideData | null> {
 }
 
 export async function getParentalGuide(imdbId: string): Promise<ParentalGuideData> {
-  // Only use cache if data is confirmed (not uncertain)
+  // Tier 1: Kaggle dataset (most reliable — seeded via seed-parental-guide.ts)
+  const seeded = await prisma.pGData.findUnique({ where: { imdbId } });
+  if (seeded) {
+    return {
+      sexNudity: seeded.sexNudity,
+      violenceGore: seeded.violenceGore,
+      profanity: seeded.profanity,
+      alcoholDrugs: seeded.alcoholDrugs,
+      frightening: seeded.frightening,
+      uncertain: false,
+    };
+  }
+
+  // Tier 2: Movie cache (from a previous successful scrape)
   const movie = await prisma.movie.findUnique({ where: { id: imdbId } });
   if (movie && !movie.pgDataUncertain) {
     return {
@@ -119,17 +128,10 @@ export async function getParentalGuide(imdbId: string): Promise<ParentalGuideDat
     };
   }
 
-  // Scrape IMDb (also re-runs whenever cached data was previously uncertain)
+  // Tier 3: Scrape IMDb (may be blocked by WAF from cloud IPs)
   const scraped = await scrapeIMDb(imdbId);
-  if (scraped) return scraped;
+  if (scraped && !scraped.uncertain) return scraped;
 
-  // Fallback: default to mild, flag as uncertain
-  return {
-    sexNudity: 1,
-    violenceGore: 1,
-    profanity: 1,
-    alcoholDrugs: 1,
-    frightening: 1,
-    uncertain: true,
-  };
+  // Tier 4: uncertain fallback
+  return { sexNudity: 1, violenceGore: 1, profanity: 1, alcoholDrugs: 1, frightening: 1, uncertain: true };
 }

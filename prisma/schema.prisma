@@ -96,3 +96,14 @@ model DailyChallenge {
   movieId String
   movie   Movie  @relation(fields: [movieId], references: [id])
 }
+
+// Parental guide data seeded from the Kaggle IMDB Parental Guide dataset
+// (keyed by IMDb ID, separate from Movie cache so seeding works regardless of play history)
+model PGData {
+  imdbId       String @id
+  sexNudity    Int
+  violenceGore Int
+  profanity    Int
+  alcoholDrugs Int
+  frightening  Int
+}

@@ -55,21 +55,28 @@ async function main() {
 
     count++;
 
+    const sexNudity    = severityToInt(row["sex_nudity"]    || row["sex & nudity"]                   || row["nudity"]   || "");
+    const violenceGore = severityToInt(row["violence_gore"] || row["violence & gore"]                 || row["violence"] || "");
+    const profanity    = severityToInt(row["profanity"]     || row["language"]                        || "");
+    const alcoholDrugs = severityToInt(row["alcohol_drugs"] || row["alcohol, drugs & smoking"]        || row["drugs"]    || "");
+    const frightening  = severityToInt(row["frightening"]   || row["frightening & intense scenes"]    || "");
+
     try {
+      // Upsert into the dedicated PGData table (works regardless of play history)
+      await prisma.pGData.upsert({
+        where: { imdbId },
+        create: { imdbId, sexNudity, violenceGore, profanity, alcoholDrugs, frightening },
+        update: { sexNudity, violenceGore, profanity, alcoholDrugs, frightening },
+      });
+
+      // Also update the Movie table if the movie has been played
       await prisma.movie.updateMany({
         where: { id: imdbId },
-        data: {
-          sexNudity: severityToInt(row["sex_nudity"] || row["sex & nudity"] || row["nudity"] || ""),
-          violenceGore: severityToInt(row["violence_gore"] || row["violence & gore"] || row["violence"] || ""),
-          profanity: severityToInt(row["profanity"] || row["language"] || ""),
-          alcoholDrugs: severityToInt(row["alcohol_drugs"] || row["alcohol, drugs & smoking"] || row["drugs"] || ""),
-          frightening: severityToInt(row["frightening"] || row["frightening & intense scenes"] || ""),
-          pgDataUncertain: false,
-        },
+        data: { sexNudity, violenceGore, profanity, alcoholDrugs, frightening, pgDataUncertain: false },
       });
       updated++;
     } catch {
-      // skip rows that don't match any movie in DB
+      // skip
     }
 
     if (count % 1000 === 0) {
