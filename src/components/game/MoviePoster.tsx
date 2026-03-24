@@ -5,7 +5,7 @@ interface MoviePosterProps {
   posterPath: string | null;
 }
 
-const IMAGE_BASE = process.env.NEXT_PUBLIC_TMDB_IMAGE_BASE ?? "https://image.tmdb.org/t/p";
+const IMAGE_BASE = process.env.NEXT_PUBLIC_TMDB_IMAGE_BASE || "https://image.tmdb.org/t/p";
 
 export default function MoviePoster({ title, posterPath }: MoviePosterProps) {
   return (

@@ -19,7 +19,7 @@ const LISTS = [
   { id: "genre:18", label: "Drama" },
 ];
 
-const IMAGE_BASE = process.env.NEXT_PUBLIC_TMDB_IMAGE_BASE ?? "https://image.tmdb.org/t/p";
+const IMAGE_BASE = process.env.NEXT_PUBLIC_TMDB_IMAGE_BASE || "https://image.tmdb.org/t/p";
 
 export default function SuggestedLists() {
   const [activeList, setActiveList] = useState(LISTS[0].id);
