@@ -26,6 +26,13 @@ function severityToInt(text: string): number {
   return 1;
 }
 
+// Prefer numeric codes (1–4 → subtract 1 for 0–3) over text labels
+function codeToInt(code: string, fallbackText: string): number {
+  const n = parseInt(code, 10);
+  if (!isNaN(n) && n >= 1 && n <= 4) return n - 1;
+  return severityToInt(fallbackText);
+}
+
 async function main() {
   const csvPath = "./data/imdb_parental_guide.csv";
   console.log(`Reading from ${csvPath}…`);
@@ -54,13 +61,6 @@ async function main() {
     if (!imdbId || !imdbId.startsWith("tt")) continue;
 
     count++;
-
-    // Prefer numeric codes (1–4 → subtract 1 for 0–3) over text labels
-    function codeToInt(code: string, fallbackText: string): number {
-      const n = parseInt(code, 10);
-      if (!isNaN(n) && n >= 1 && n <= 4) return n - 1;
-      return severityToInt(fallbackText);
-    }
 
     const sexNudity    = codeToInt(row["sex_code"],       row["sex"]      || row["sex_nudity"]    || "");
     const violenceGore = codeToInt(row["violence_code"],  row["violence"] || row["violence_gore"] || "");
