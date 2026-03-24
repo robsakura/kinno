@@ -6,9 +6,9 @@
  *   1. Download the CSV from Kaggle and place it at: data/imdb_parental_guide.csv
  *   2. Run: npx tsx scripts/seed-parental-guide.ts
  *
- * The CSV is expected to have columns:
- *   imdb_id, sex_nudity, violence_gore, profanity, alcohol_drugs, frightening
- *   with severity values: "None", "Mild", "Moderate", "Severe"
+ * The CSV is expected to have columns (Barry Haworth dataset):
+ *   tconst, sex, violence, profanity, drugs, intense (text labels)
+ *   sex_code, violence_code, profanity_code, drug_code, intense_code (numeric 1=None 2=Mild 3=Moderate 4=Severe)
  */
 
 import { createReadStream } from "fs";
@@ -55,11 +55,18 @@ async function main() {
 
     count++;
 
-    const sexNudity    = severityToInt(row["sex_nudity"]    || row["sex & nudity"]                   || row["nudity"]   || "");
-    const violenceGore = severityToInt(row["violence_gore"] || row["violence & gore"]                 || row["violence"] || "");
-    const profanity    = severityToInt(row["profanity"]     || row["language"]                        || "");
-    const alcoholDrugs = severityToInt(row["alcohol_drugs"] || row["alcohol, drugs & smoking"]        || row["drugs"]    || "");
-    const frightening  = severityToInt(row["frightening"]   || row["frightening & intense scenes"]    || "");
+    // Prefer numeric codes (1–4 → subtract 1 for 0–3) over text labels
+    function codeToInt(code: string, fallbackText: string): number {
+      const n = parseInt(code, 10);
+      if (!isNaN(n) && n >= 1 && n <= 4) return n - 1;
+      return severityToInt(fallbackText);
+    }
+
+    const sexNudity    = codeToInt(row["sex_code"],       row["sex"]      || row["sex_nudity"]    || "");
+    const violenceGore = codeToInt(row["violence_code"],  row["violence"] || row["violence_gore"] || "");
+    const profanity    = codeToInt(row["profanity_code"], row["profanity"]                        || "");
+    const alcoholDrugs = codeToInt(row["drug_code"],      row["drugs"]    || row["alcohol_drugs"] || "");
+    const frightening  = codeToInt(row["intense_code"],   row["intense"]  || row["frightening"]   || "");
 
     try {
       // Upsert into the dedicated PGData table (works regardless of play history)
