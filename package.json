@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "prisma migrate deploy && next start",
+    "prestart": "prisma migrate deploy",
+    "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
