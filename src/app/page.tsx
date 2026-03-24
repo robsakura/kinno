@@ -22,14 +22,14 @@ export default async function HomePage() {
           <Image
             src="/kinno_logo_white.png"
             alt="Kinno"
-            width={180}
-            height={60}
-            className="h-14 w-auto"
+            width={360}
+            height={120}
+            className="h-28 w-auto"
             priority
           />
         </div>
         <p className="text-cinema-muted max-w-sm mx-auto text-sm leading-relaxed">
-          Guess the release year, IMDb rating, and parental guide ratings of any movie.
+          Show your movie knowledge and climb the leaderboards!
         </p>
       </div>
 

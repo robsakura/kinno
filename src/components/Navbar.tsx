@@ -1,7 +1,7 @@
 "use client";
 import { signIn, signOut, useSession } from "next-auth/react";
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -31,18 +31,9 @@ export default function Navbar() {
           {status === "loading" ? (
             <div className="h-8 w-8 animate-pulse rounded-full bg-cinema-surface" />
           ) : session ? (
-            <div className="flex items-center gap-2">
-              {session.user?.image && (
-                <Image
-                  src={session.user.image}
-                  alt={session.user.name ?? "User"}
-                  width={28}
-                  height={28}
-                  className="rounded-full border border-cinema-border shrink-0"
-                />
-              )}
+            <div className="flex items-center gap-3">
               {session.user?.username && (
-                <span className="text-sm font-medium text-slate-200 max-w-[120px] truncate">
+                <span className="text-sm font-medium text-slate-200 max-w-[140px] truncate">
                   {session.user.username}
                 </span>
               )}

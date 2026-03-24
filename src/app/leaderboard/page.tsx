@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
@@ -7,13 +6,13 @@ export const dynamic = "force-dynamic";
 
 export default async function LeaderboardPage() {
   const session = await getServerSession(authOptions);
-  let users: { id: string; name: string | null; username: string | null; image: string | null; totalPoints: number }[] = [];
+  let users: { id: string; name: string | null; username: string | null; totalPoints: number }[] = [];
 
   try {
     users = await prisma.user.findMany({
       orderBy: { totalPoints: "desc" },
       take: 20,
-      select: { id: true, name: true, username: true, image: true, totalPoints: true },
+      select: { id: true, name: true, username: true, totalPoints: true },
     });
   } catch {
     // DB not ready
@@ -58,19 +57,6 @@ export default async function LeaderboardPage() {
                 <span className="w-7 text-center text-sm font-bold text-cinema-muted">
                   {medal ?? `#${rank}`}
                 </span>
-                {user.image ? (
-                  <Image
-                    src={user.image}
-                    alt={user.name ?? "User"}
-                    width={32}
-                    height={32}
-                    className="rounded-full border border-cinema-border shrink-0"
-                  />
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-cinema-border shrink-0 flex items-center justify-center text-xs text-cinema-muted">
-                    👤
-                  </div>
-                )}
                 <span className={`flex-1 text-sm font-medium ${isCurrentUser ? "text-gold" : "text-slate-200"}`}>
                   {user.username ?? user.name ?? "Anonymous"}
                   {isCurrentUser && " (you)"}

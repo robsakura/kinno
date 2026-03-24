@@ -8,8 +8,8 @@ import UsernameModal from "@/components/UsernameModal";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Kinno — Guess the Movie",
-  description: "Guess a movie's release year, IMDb rating, and parental guide ratings to earn points.",
+  title: "Kinno — Show your movie knowledge",
+  description: "Show your movie knowledge and climb the leaderboards!",
   icons: {
     icon: "/kinno_icon.png",
     apple: "/kinno_icon.png",
